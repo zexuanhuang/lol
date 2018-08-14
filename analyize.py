@@ -3,82 +3,61 @@ import datetime
 import numpy as np
 import json
 
-def by_hour(matches):
-	wins = {i:0 for i in range(24)}
-	loses = {i:0 for i in range(24)}
+
+def by_unit(matches, unit):
+	spans = {
+		'hour': 24,
+		'date': 7
+	}
+	span = spans[unit]
+	wins = { i:0 for i in range(span)}
+	loses = { i:0 for i in range(span)}
 	rates = []
-	hours = [i for i in range(24)]
+	units = [ i for i in range(span) ]
+
+	def get_bin(time, unit):
+		if unit == 'hour':
+			return time.hour
+		if unit == 'date':
+			return time.weekday()
+		raise Exception('f u')
 
 	for _, body in matches.items():
 		time = datetime.datetime.fromtimestamp(body['time'])
 		if body['result'] == 'Won':
-			wins[time.hour] += 1
+			wins[get_bin(time, unit)] += 1
 		else:
-			loses[time.hour] += 1
+			loses[get_bin(time, unit)] += 1
 
-	for hour in hours:
-		if wins[hour] == 0 and loses[hour] == 0:
+	for u in units:
+		if wins[u] == 0 and loses[u] == 0:
 			rate = 0
 		else:
-			rate = wins[hour] / (wins[hour] + loses[hour])
+			rate = wins[u] / (wins[u]+loses[u])
 		rates.append(rate)
 
 	npa = np.array(rates)
-	rates_marked = np.ma.masked_where( npa < 0.5, npa)
+	rates_marked = np.ma.masked_where(npa < 0.5, npa)
 
 	fig, ax = plt.subplots()
-	ax.bar(hours, rates_marked)
+	ax.bar(units, rates_marked)
 
-	for h in hours:
-		hi ="***" if rates[h] > 0.5 else ''
-		print(f'hour:{h} win rate:{rates[h]} {hi}')
+	for u in units:
+		uu = "***" if rates[u] > 0.5 else ''
+		print(f'{unit}:{uu} win rate:{rates[u]} {uu}')
 
 	plt.axhline(y=0.5)
 
 	plt.show()
 
-def by_date(matches):
-    wins = {i:0 for i in range(7)}
-    loses = {i:0 for i in range(7)}
-    rates = []
-    dates = [i for i in range(7)]
-
-    for _, body in matches.items():
-        date = datetime.datetime.fromtimestamp(body['time']).weekday()
-        if body['result'] == 'Won':
-            wins[date] += 1
-        else:
-            loses[date] += 1
-
-    for date in dates:
-        if wins[date] == 0 and loses[hour] == 0:
-            rate = 0
-        else:
-            rate = wins[date] / (wins[date]+loses[date])
-        rates.append(rate)
-
-    npa = np.array(rates)
-    rates_marked = np.ma.masked_where(npa < 0.5, npa)
-    fig, ax = plt.subplots()
-    ax.bar(dates, rates_marked)
-
-    plt.axhline(y=0.5)
-    plt.show()
 
 def main():
 	match_file = './matches.json'
 	with open(match_file, 'r') as f:
 		matches = json.load(f)
-	# x, y = [], []
-	# for id, body in matches.items():
-	# 	x.append(datetime.datetime.fromtimestamp(body['time']))
-	# 	y.append(1 if body['result'] == 'Won' else -1)
 
-	# plt.plot(x, y)
-	# plt.show()
+	by_unit(matches, 'date')
 
-	by_hour(matches)
-	by_date(matches)
 
 if __name__ == '__main__':
 	main()
