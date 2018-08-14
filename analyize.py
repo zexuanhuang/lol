@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import datetime
 import numpy as np
 import json
-
+import argparse
 
 def by_unit(matches, unit):
 	spans = {
@@ -37,26 +37,38 @@ def by_unit(matches, unit):
 		rates.append(rate)
 
 	npa = np.array(rates)
-	rates_marked = np.ma.masked_where(npa < 0.5, npa)
+	npu = np.array(units)
+	bad = npa <= 0.5
+	good = npa > 0.5
 
 	fig, ax = plt.subplots()
-	ax.bar(units, rates_marked)
+	ax.bar(npu[bad], npa[bad], color='gray')
+	ax.bar(npu[good], npa[good], color='red')
 
-	for u in units:
+	for i, u in enumerate(units):
 		uu = "***" if rates[u] > 0.5 else ''
-		print(f'{unit}:{uu} win rate:{rates[u]} {uu}')
+		value = "{:.2%}".format(rates[u])
 
+		print(f'{unit}:{u} win rate:{value} wins:{wins[u]} loses:{loses[u]} {uu}')
+
+		if rates[u] > 0:
+			ax.text(u-0.4, rates[u]+0.01, value, fontsize=8, va='center')
+			ax.text(u-0.3, rates[u]-0.02, f'wins:{wins[u]}', fontsize=8, va='center')
+			ax.text(u-0.3, rates[u]-0.04, f'loses:{loses[u]}', fontsize=8, va='center')
 	plt.axhline(y=0.5)
 
 	plt.show()
 
 
 def main():
+	p = argparse.ArgumentParser()
+	p.add_argument('unit', choices=['hour', 'date'])
+	result = p.parse_args()
 	match_file = './matches.json'
 	with open(match_file, 'r') as f:
 		matches = json.load(f)
 
-	by_unit(matches, 'date')
+	by_unit(matches, result.unit)
 
 
 if __name__ == '__main__':
